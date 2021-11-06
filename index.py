@@ -223,8 +223,6 @@ def refreshHeroes():
 
 def main():
     print()
-    print('\nPlease, consider buying me a coffe 😊:')
-    print('0xbd06182D8360FB7AC1B05e871e56c76372510dDf\n')
     time.sleep(5)
     t = c['time_intervals']
 
@@ -279,4 +277,4 @@ main()
 # melhorar o log
 # add argumets
 # salvar timestamp dos clickes em newmap em um arquivo
-# soh resetar posiçoes se n tiver clickado em newmap em x segundos
+# soh resetar posicoes se n tiver clickado em newmap em x segundos
