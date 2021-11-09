@@ -38,12 +38,6 @@ pyautogui.FAILSAFE = True
 hero_clicks = 0
 login_attempts = 0
 
-
-
-
-
-
-
 go_work_img = cv2.imread('targets/go-work.png')
 commom_img = cv2.imread('targets/commom-text.png')
 arrow_img = cv2.imread('targets/go-back-arrow.png')
@@ -209,9 +203,7 @@ def login():
         # time.sleep(15)
         print('ok button clicked')
 
-
-
-
+        
 def refreshHeroes():
     goToHeroes()
     buttonsClicked = 1
