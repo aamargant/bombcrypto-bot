@@ -3,3 +3,5 @@ mss
 pyautogui
 pyyaml
 requests
+Pillow
+

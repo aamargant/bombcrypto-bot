@@ -3,10 +3,15 @@ import numpy as np
 import mss
 import pyautogui
 import time
-
+import os
 import yaml
-
+import logging
 import requests
+
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 headers = {
     'authority': 'plausible.io',
@@ -30,6 +35,7 @@ if __name__ == '__main__':
 
     stream = open("config.yaml", 'r')
     c = yaml.safe_load(stream)
+    
 ct = c['trashhold']
 
 pyautogui.PAUSE = c['time_intervals']['interval_between_moviments']
@@ -50,7 +56,20 @@ select_wallet_hover_img = cv2.imread('targets/select-wallet-1-hover.png')
 select_metamask_no_hover_img = cv2.imread('targets/select-wallet-1-no-hover.png')
 sign_btn_img = cv2.imread('targets/select-wallet-2.png')
 new_map_btn_img = cv2.imread('targets/new-map.png')
+full_img = cv2.imread('targets/is-full.png')
+server_overload_img = cv2.imread('targets/server_overload.png')
+coins_img = cv2.imread('targets/coins.png')
+legend_hero_img = cv2.imread('targets/legend_hero.png')
+rare_hero_img = cv2.imread('targets/rare_hero.png')
+common_hero_img = cv2.imread('targets/commom-text.png')
 
+
+
+
+
+def start(update, context):
+    update.message.reply_text('Welelcome to the bomb crypto bot!')
+    main(update)
 
 def clickBtn(img,name=None, timeout=3, trashhold = ct['default']):
     if not name is None:
@@ -69,7 +88,7 @@ def clickBtn(img,name=None, timeout=3, trashhold = ct['default']):
             continue
 
         x,y,w,h = matches[0]
-        pyautogui.moveTo(x+w/2,y+h/2,1)
+        pyautogui.moveTo(x+w/2,y+h/2,0.5)
         pyautogui.click()
         return True
 
@@ -108,52 +127,64 @@ def scroll():
         return
     x,y,w,h = commoms[len(commoms)-1]
     print('moving to {},{} and scrolling'.format(x,y))
-#
     pyautogui.moveTo(x,y,1)
 
     if not c['use_click_and_drag_instead_of_scroll']:
         pyautogui.scroll(-c['scroll_size'])
     else:
-        pyautogui.dragRel(0,-500,duration=1)
-        print(c['use_click_and_drag_instead_of_scroll'])
+        pyautogui.dragRel(0,-340,duration=1)
 
-
-def clickButtons():
+def checkCoin(update):
+    if clickBtn(coins_img, name='checkCoins', timeout = 2):
+        update.message.reply_text('COINS:')
+        img = pyautogui.screenshot()
+        img.save(r'remove.png')
+        update.message.bot.send_photo(update.message.chat.id, open('remove.png', 'rb'))
+        os.remove('remove.png')
+        clickBtn(x_button_img)
+    
+def clickButtons(update):
     buttons = positions(go_work_img, trashhold=ct['go_to_work_btn'])
-    print('buttons: {}'.format(len(buttons)))
-    for (x, y, w, h) in buttons:
-        pyautogui.moveTo(x+(w/2),y+(h/2),1)
-        pyautogui.click()
-        global hero_clicks
-        hero_clicks = hero_clicks + 1
-        print('{} heroes sent to work so far'.format(hero_clicks))
-        #cv2.rectangle(sct_img, (x, y) , (x + w, y + h), (0,255,255),2)
-    return len(buttons)
+    full = positions(full_img, trashhold=ct['go_to_work_btn'])
+    common = positions(common_hero_img, trashhold=ct['go_to_work_btn'])
+    rare = positions(rare_hero_img, trashhold=ct['go_to_work_btn'])
+    legend = positions(legend_hero_img, trashhold=ct['go_to_work_btn'])
+    #print('buttons: {}'.format(len(buttons)))
+    #print('full: {}'.format(len(full)))
+    for (fx, fy, fw, fh) in full:
+        for (x, y, w, h) in buttons:
+            print('full fx= {} fy= {} fw= {} fh= {} / work x= {} y= {} w= {} h= {}'.format(fx, fy, fw, fh, x, y, w, h))
+            if (fy + 4 == y or fy + 5 == y):
+                print()
+                #print('IN')
+                # when click maybe the server says is overload, fix it
+                pyautogui.moveTo(x+(w/2),y+(h/2),1)
+                pyautogui.click()
+                global hero_clicks
+                hero_clicks = hero_clicks + 1
+                if clickBtn(server_overload_img, name='server_overload', timeout = 3):
+                    clickBtn(x_button_img, name='server_overload', timeout = 8)
+                    print()
+                    time.sleep(11)
+                update.message.reply_text(str(hero_clicks) + ' heroes sent to work so far')
 
-def goToHeroes():
-    if clickBtn(arrow_img):
-        global login_attempts
-        login_attempts = 0
+                #for (cx, cy, cw, ch) in common:
+              #       print('commonx= {} y= {} w= {} h= {} '.format(cx, cy, cw, ch))
 
-    # time.sleep(5)
-    clickBtn(hero_img)
-    # time.sleep(5)
+              #  for (rx, ry, rw, rh) in rare:
+             #        print('rare: +rx, ry, rw, rh'.format(rx, ry, rw, rh))
+
+             #   for (lx, ly, lw, lh) in legend:
+             #        print('legend: +lx, ly, lw, lh'.format(lx, ly, lw, lh))
+                #print('{} heroes sent to work so far'.format(hero_clicks))
+           # else:
+                #print('OUT')
 
 def goToGame():
-    # in case of server overload popup
     clickBtn(x_button_img)
-    # time.sleep(3)
-    clickBtn(x_button_img)
-
     clickBtn(teasureHunt_icon_img)
 
-def refreshHeroesPositions():
-    clickBtn(arrow_img)
-    clickBtn(teasureHunt_icon_img)
-    # time.sleep(3)
-    clickBtn(teasureHunt_icon_img)
-
-def login():
+def login(update):
     global login_attempts
 
     if login_attempts > 3:
@@ -162,58 +193,55 @@ def login():
         pyautogui.press('f5')
         return
 
-    if clickBtn(connect_wallet_btn_img, name='connectWalletBtn', timeout = 10):
+    update.message.reply_text('Connecting wallet...')
+    if clickBtn(connect_wallet_btn_img, name='connectWalletBtn', timeout = 3):
         print('connect wallet button clicked')
-        #TODO mto ele da erro e poco o botao n abre
-        # time.sleep(10)
-
-    if clickBtn(sign_btn_img, name='sign button', timeout=8):
-        # sometimes the sign popup appears imediately
-        login_attempts = login_attempts + 1
-        print('sign button clicked')
-        print('{} login attempt'.format(login_attempts))
-        # time.sleep(5)
-        if clickBtn(teasureHunt_icon_img, name='teasureHunt', timeout = 15):
-            print('sucessfully login, treasure hunt btn clicked')
-            login_attempts = 0
-        # time.sleep(15)
-        return
-        # click ok button
 
     if not clickBtn(select_metamask_no_hover_img, name='selectMetamaskBtn'):
+        print('SDGFH;MDGNFSBADEGG')
         if clickBtn(select_wallet_hover_img, name='selectMetamaskHoverBtn', trashhold = ct['select_wallet_buttons'] ):
             # o ideal era que ele alternasse entre checar cada um dos 2 por um tempo 
             print('sleep in case there is no metamask text removed')
             # time.sleep(20)
-    else:
-        print('sleep in case there is no metamask text removed')
-        # time.sleep(20)
+        else:
+            print('sleep in case there is no metamask text removed')
+            # time.sleep(20)
 
     if clickBtn(sign_btn_img, name='signBtn', timeout = 20):
         login_attempts = login_attempts + 1
         print('sign button clicked')
+        update.message.reply_text('Loading game...')
         print('{} login attempt'.format(login_attempts))
-        # time.sleep(25)
-        if clickBtn(teasureHunt_icon_img, name='teasureHunt', timeout=25):
-            print('sucessfully login, treasure hunt btn clicked')
-            login_attempts = 0
-        # time.sleep(15)
-
-    if clickBtn(ok_btn_img, name='okBtn', timeout=5):
-        # time.sleep(15)
-        print('ok button clicked')
-
         
-def refreshHeroes():
-    goToHeroes()
-    buttonsClicked = 1
-    while(buttonsClicked >0):
-        scroll()
-        time.sleep(2)
-        buttonsClicked = clickButtons()
-    goToGame()
+def refreshHeroes(update):
+    if clickBtn(hero_img, name='heroBtn', timeout=25):
+        global login_attempts
+        login_attempts = 0
+        buttonsClicked = 2
+        while(buttonsClicked > 0):
+            clickButtons(update)
+            scroll()
+            time.sleep(4)
+            buttonsClicked -= 1
+        clickButtons(update)
+        goToGame()
+    else:
+        print('Heroes button timeout')
 
-def main():
+
+def letsgo():
+    global updater
+    updater = Updater("2109978508:AAGphFKYkYOd860bKrMPX7zRh-lkVZFE9kA", use_context=True)
+
+    dp = updater.dispatcher
+    dp.add_handler(CommandHandler("start", start))
+
+    # Start the Bot
+    updater.start_polling()
+    updater.idle()
+
+
+def main(update):
     print()
     time.sleep(5)
     t = c['time_intervals']
@@ -222,51 +250,39 @@ def main():
     "login" : 0,
     "heroes" : 0,
     "new_map" : 0,
-    "refresh_heroes" : 0
+    "refresh_heroes" : 0,
+    "coin" : 0
     }
-
+    
     while True:
         now = time.time()
 
-        if now - last["login"] > t['check_for_login'] * 60:
-            last["login"] = now
-            #print('checking for login')
-            login()
+        if clickBtn(connect_wallet_btn_img, name='connectWalletBtn', timeout = 1):
+            print('connect wallet button clicked')
+            login(update)
+
+        if now - last["coin"] > t['send_heroes_for_work'] * 60:
+            last["coin"] = now
+            print('checking the amount of coins')
+            checkCoin(update)
 
         if now - last["heroes"] > t['send_heroes_for_work'] * 60:
             last["heroes"] = now
             print('sending heroes to work')
-            refreshHeroes()
+            clickBtn(arrow_img, name='go_back_arrow_img', timeout=1)
+            refreshHeroes(update)
 
-        if now - last["new_map"] > t['check_for_new_map_button']:
-            last["new_map"] = now
-            #print('checking for New Map Button')
-            if clickBtn(new_map_btn_img):
-                print('new map button clicked')
+        if clickBtn(ok_btn_img, name='okBtn', timeout=1):
+            print('ok button clicked')
+            update.message.reply_text('OK button clicked')
+            time.sleep(15)
+            login(update)
 
-        if now - last["refresh_heroes"] > t['refresh_heroes_positions'] * 60 :
-            last["refresh_heroes"] = now
-            refreshHeroesPositions()
-            print('Refreshing Heroes Positions')
+        if clickBtn(new_map_btn_img, name='new_map', timeout=1):
+            print('new map button clicked')
+            update.message.reply_text('New map button clicked')
 
         #clickBtn(teasureHunt)
-        time.sleep(1)
+        time.sleep(15)
 
-main()
-
-
-
-
-
-#cv2.imshow('img',sct_img)
-#cv2.waitKey()
-# aumentar tempo antes do sign
-# chacar se tem o sign antes de aperta o connect wallet
-# arrumar aquela parte do codigo copiado onde tem q checar o sign 2 vezes
-# colocar o botao em pt
-# dar uma olhada no bug de quando uma janela do metamask pra assinar fica aberto, e ver como o programa reage
-# se esperar mto pra assinar ele n vai
-# melhorar o log
-# add argumets
-# salvar timestamp dos clickes em newmap em um arquivo
-# soh resetar posicoes se n tiver clickado em newmap em x segundos
+letsgo()
