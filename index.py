@@ -1,4 +1,5 @@
 from cv2 import cv2
+from dotenv import load_dotenv
 import numpy as np
 import mss
 import pyautogui
@@ -12,6 +13,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+load_dotenv()
 
 headers = {
     'authority': 'plausible.io',
@@ -231,7 +233,7 @@ def refreshHeroes(update):
 
 def letsgo():
     global updater
-    updater = Updater("2109978508:AAGphFKYkYOd860bKrMPX7zRh-lkVZFE9kA", use_context=True)
+    updater = Updater(os.getenv('TELEGRAM_TOKEN'), use_context=True)
 
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
