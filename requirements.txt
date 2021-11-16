@@ -4,4 +4,4 @@ pyautogui
 pyyaml
 requests
 Pillow
-
+python-telegram-bot
